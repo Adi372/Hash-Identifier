@@ -404,8 +404,4 @@ This project is designed to practice Python fundamentals including:
 
 ---
 
-## Author
-
-**Aditya Pandey**
-
 Built as a cybersecurity/Python learning project.
