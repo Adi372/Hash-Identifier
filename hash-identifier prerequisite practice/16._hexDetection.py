@@ -18,7 +18,7 @@ HEX_RULES = [
 class Candidate:
     algorithm: str
     confidence: str
-    result: str
+    reason: str
 
 def identify(text: str) -> list[Candidate]:
 
