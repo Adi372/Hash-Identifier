@@ -24,6 +24,9 @@ HEX_CHARSET = frozenset(
     "0123456789abcdefABCDEF"
 )
 
+_MYSQL5_HEX_BODY_LENGTH = 40
+_MYSQL5_TOTAL_LENGTH = _MYSQL5_HEX_BODY_LENGTH + 1
+
 HEX_LENGTH_RULES = {
     16: ["MySQL323", "CRC-64"],
     32: ["MD5", "NTLM", "MD4", "RIPEMD-128"],
@@ -35,6 +38,13 @@ HEX_LENGTH_RULES = {
 
 def _is_hex(text: str) -> bool:
     return bool(text) and all(c in HEX_CHARSET for c in text)
+
+def _is_mysql5(text: str) -> bool:
+    if len(text) != _MYSQL5_TOTAL_LENGTH or not text.startswith("*"):
+        return False
+    body = text[1:]
+    return all(c in "0123456789ABCDEF" for c in body)
+
 
 def identify(raw_input: str):
     text = raw_input.strip()
@@ -51,6 +61,15 @@ def identify(raw_input: str):
                     reason=f"prefix `{prefix}` - {note}",
                 )
             ]
+
+    if _is_mysql5(text):
+        return [
+            HashCandidate(
+                algorithm="MySQL5",
+                confidence="high",
+                reason="starts with `*` and contains exactly 40 uppercase hex characters",
+            )
+        ]
 
     if _is_hex(text):
         algorithms = HEX_LENGTH_RULES.get(len(text), [])
