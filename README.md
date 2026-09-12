@@ -1,407 +1,321 @@
-# Hash Identifier
+# 🔐 Hash Identifier
 
-A simple Python command-line tool that identifies **possible hash algorithms** by analyzing the format, length, prefix, and character pattern of a given string.
+A lightweight Python cybersecurity utility that identifies the **possible type of a hash or encoded string** by analyzing its structure, prefix, length, and character set.
 
-> **Note:** Hash identification is based on the shape of the input. A hash's format can often match multiple algorithms, so the tool reports candidates with different confidence levels instead of claiming certainty when it cannot know.
-
----
-
-## Features
-
-* Identify common hash formats
-* Detect algorithms using known prefixes
-* Detect hexadecimal hashes using their length
-* Detect special formats such as:
-
-  * bcrypt
-  * Argon2
-  * MySQL5
-  * DES crypt
-  * NetNTLMv1
-  * NetNTLMv2
-* Recognize generic PHC strings
-* Detect JWTs and Base64 blobs that are **not hashes**
-* Show confidence level for each possible algorithm
-* Command-line interface using `argparse`
-
+> ⚠️ **Important:** Hash identification based on shape is not always definitive. Multiple algorithms can produce strings with the same length and character set, so the tool reports **possible matches and confidence levels** rather than claiming certainty.
 
 ---
 
-## How It Works
+## ✨ Features
 
-The identifier follows a simple pipeline:
+* 🔎 Identify common hash formats
+* 🧩 Detect hashes using known prefixes
+* 📏 Analyze hash length and character set
+* 🎯 Show multiple possible matches when formats overlap
+* 📊 Provide confidence levels and reasons
+* 🪪 Detect JWTs separately from hashes
+* 📦 Detect Base64-like strings
+* 🧱 Recognize generic PHC-style strings
+* 💻 Simple command-line interface
+* 🐍 Built entirely with Python
+
+---
+
+## 🛠️ Technologies Used
+
+* **Python 3**
+* `dataclasses`
+* `argparse`
+* Python type hints
+
+No external Python packages are required.
+
+---
+
+## 📋 Supported Hashes & Formats
+
+|  # | Hash / Format                  | Check Used                | Criteria                                                                                        | Confidence |
+| -: | ------------------------------ | ------------------------- | ----------------------------------------------------------------------------------------------- | ---------- |
+|  1 | **Argon2id**                   | Prefix check              | Starts with `$argon2id$`                                                                        | High       |
+|  2 | **Argon2i**                    | Prefix check              | Starts with `$argon2i$`                                                                         | High       |
+|  3 | **bcrypt 2b**                  | Prefix check              | Starts with `$2b$`                                                                              | High       |
+|  4 | **bcrypt 2a**                  | Prefix check              | Starts with `$2a$`                                                                              | High       |
+|  5 | **bcrypt 2y**                  | Prefix check              | Starts with `$2y$`                                                                              | High       |
+|  6 | **MySQL5**                     | Prefix + length + charset | Starts with `*`, total length = **41**, remaining 40 characters are uppercase hexadecimal       | High       |
+|  7 | **DES crypt**                  | Length + charset          | Exactly **13 characters**, all from `./0-9A-Za-z`                                               | Medium     |
+|  8 | **MD5**                        | Hex + length              | Exactly **32 hexadecimal characters**                                                           | Medium     |
+|  9 | **NTLM**                       | Hex + length              | Exactly **32 hexadecimal characters**                                                           | Low        |
+| 10 | **MD4**                        | Hex + length              | Exactly **32 hexadecimal characters**                                                           | Low        |
+| 11 | **RIPEMD-128**                 | Hex + length              | Exactly **32 hexadecimal characters**                                                           | Low        |
+| 12 | **SHA-1**                      | Hex + length              | Exactly **40 hexadecimal characters**                                                           | Medium     |
+| 13 | **RIPEMD-160**                 | Hex + length              | Exactly **40 hexadecimal characters**                                                           | Low        |
+| 14 | **SHA-256**                    | Hex + length              | Exactly **64 hexadecimal characters**                                                           | Medium     |
+| 15 | **SHA3-256**                   | Hex + length              | Exactly **64 hexadecimal characters**                                                           | Low        |
+| 16 | **SHA-384**                    | Hex + length              | Exactly **96 hexadecimal characters**                                                           | Medium     |
+| 17 | **SHA-512**                    | Hex + length              | Exactly **128 hexadecimal characters**                                                          | Medium     |
+| 18 | **SHA3-512**                   | Hex + length              | Exactly **128 hexadecimal characters**                                                          | Low        |
+| 19 | **Generic PHC string**         | `$` + field structure     | Starts with `$`, contains another `$`, and the first field contains valid identifier characters | Low        |
+| 20 | **JWT** *(not a hash)*         | Prefix check              | Starts with `eyJ`                                                                               | High       |
+| 21 | **Base64 blob** *(not a hash)* | Character check + length  | Contains `+`, `/`, or `=` and is longer than 8 characters                                       | Medium     |
+
+### 📊 Current Coverage
+
+* **18 hash algorithm candidates**
+* **3 additional encoded/non-hash formats**
+* **21 possible identification outputs**
+
+---
+
+## 🚀 Usage
+
+Run the program from the terminal:
+
+```bash
+python hash_identifier.py "5d41402abc4b2a76b9719d911017c592"
+```
+
+Example output:
 
 ```text
-                INPUT
-                  │
-                  ▼
-              strip()
-                  │
-                  ▼
-             Empty input?
-             /          \
-           Yes           No
-            │             │
-            ▼             ▼
-           []       Prefix rules
-                          │
-                          ▼
-                  Special formats
-                          │
-                          ▼
-                   Hex + length
-                          │
-                          ▼
-                    PHC fallback
-                          │
-                          ▼
-                     Shape hints
-                          │
-                          ▼
-                         []
-```
+Possible matches:
 
-The program does **not** crack or recover passwords.
+1. MD5
+   Confidence: medium
+   Reason: 32 hexadecimal characters
 
-It only examines the structure of the supplied string.
+2. NTLM
+   Confidence: low
+   Reason: 32 hexadecimal characters
 
----
+3. MD4
+   Confidence: low
+   Reason: 32 hexadecimal characters
 
-## Installation
-
-Clone the repository:
-
-```bash
-git clone <your-repository-url>
-cd hash-identifier
-```
-
-Install the dependencies using your preferred Python environment.
-
-If you are using `uv`:
-
-```bash
-uv sync
+4. RIPEMD-128
+   Confidence: low
+   Reason: 32 hexadecimal characters
 ```
 
 ---
 
-## Usage
+## 🧪 Example Tests
 
-### Using Python
-
-Run:
+### Argon2id
 
 ```bash
-python hash_identifier.py HASH
+python hash_identifier.py '$argon2id$v=19$m=65536,t=3,p=4$abc$xyz'
 ```
 
-Example:
-
-```bash
-python hash_identifier.py 5f4dcc3b5aa765d61d8327deb882cf99
-```
-
-The program will return the possible algorithms.
-
-Example:
+Output:
 
 ```text
-Possible algorithm: MD5
+Argon2id
+Confidence: high
 ```
 
----
-
-### Using `uv`
-
-You can also run:
+### bcrypt
 
 ```bash
-uv run hash_identifier.py 5f4dcc3b5aa765d61d8327deb882cf99
+python hash_identifier.py '$2b$12$abcdefghijklmnopqrstuu'
 ```
 
----
+Output:
 
-## Example
+```text
+bcrypt
+Confidence: high
+```
+
+### MySQL5
+
+```bash
+python hash_identifier.py '*0123456789ABCDEF0123456789ABCDEF01234567'
+```
+
+Output:
+
+```text
+MySQL5
+Confidence: high
+```
 
 ### MD5
 
-Input:
-
-```text
-5f4dcc3b5aa765d61d8327deb882cf99
+```bash
+python hash_identifier.py '5d41402abc4b2a76b9719d911017c592'
 ```
 
 Possible result:
 
 ```text
 MD5
-NTLM
-MD4
-RIPEMD-128
+Confidence: medium
 ```
 
-The reason multiple algorithms can appear is that several algorithms can produce a **32-character hexadecimal value**.
+### JWT
 
-The tool therefore uses confidence levels.
-
----
-
-## Confidence Levels
-
-| Confidence | Meaning                                        |
-| ---------- | ---------------------------------------------- |
-| High       | The format strongly identifies the algorithm   |
-| Medium     | The format is a good indication but not unique |
-| Low        | The algorithm is another possible match        |
-
-For example:
-
-```text
-Algorithm     Confidence
-MD5           medium
-NTLM          low
-MD4           low
-RIPEMD-128    low
+```bash
+python hash_identifier.py 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
 ```
 
-This prevents the program from pretending that a hash can always be identified with certainty.
-
----
-
-## Supported Detection Methods
-
-### 1. Prefix Detection
-
-Some formats contain recognizable prefixes.
-
-For example:
+Output:
 
 ```text
-$2b$...
-```
-
-can identify:
-
-```text
-bcrypt
-```
-
-Similarly, Argon2 formats contain prefixes such as:
-
-```text
-$argon2id$
-$argon2i$
+JWT (not a hash)
+Confidence: high
 ```
 
 ---
 
-### 2. Hexadecimal + Length
+## 🧠 How It Works
 
-Some hashes consist entirely of hexadecimal characters.
-
-The program checks:
+The identifier follows a rule-based detection process:
 
 ```text
-Character set
-      +
-Hash length
+Input
+  │
+  ▼
+Normalize input
+  │
+  ▼
+Known prefix checks
+  │
+  ├── Argon2
+  ├── bcrypt
+  └── Other known formats
+  │
+  ▼
+Specific format checks
+  │
+  ├── MySQL5
+  └── DES crypt
+  │
+  ▼
+PHC-style check
+  │
+  ▼
+JWT check
+  │
+  ▼
+Base64-like check
+  │
+  ▼
+Hexadecimal check
+  │
+  ├── 16 characters
+  ├── 32 characters
+  ├── 40 characters
+  ├── 64 characters
+  ├── 96 characters
+  └── 128 characters
+  │
+  ▼
+Return possible candidates
 ```
 
-For example:
+The program does **not** try to crack or reverse the hash.
 
-| Length | Possible algorithms        |
-| -----: | -------------------------- |
-|     32 | MD5, NTLM, MD4, RIPEMD-128 |
-|     40 | SHA-1, RIPEMD-160          |
-|     64 | SHA-256                    |
-|    128 | SHA-512                    |
+Instead, it asks:
 
-Length alone is **not enough** to guarantee the algorithm.
+> **"What formats could this string represent?"**
 
 ---
 
-### 3. Special Formats
+## 🎯 Confidence Levels
 
-The program also checks formats such as:
+### 🟢 High
 
-```text
-MySQL5
-DES crypt
-NetNTLMv1
-NetNTLMv2
-```
-
-These formats have structural characteristics that can be checked directly.
-
----
-
-### 4. PHC Strings
-
-If a string starts with `$` but doesn't match one of the specifically known formats, the program attempts to extract the algorithm name from the PHC-style structure.
+The format contains a strong identifying feature, such as a known prefix.
 
 Example:
 
 ```text
-$unknown$v=1$...
+$argon2id$...
 ```
 
-may produce:
+The `$argon2id$` prefix strongly identifies Argon2id.
+
+### 🟡 Medium
+
+The format matches important structural characteristics, but there can still be ambiguity.
+
+Example:
 
 ```text
-PHC string (unknown)
+32 hexadecimal characters
 ```
 
-with low confidence.
+This is compatible with MD5, but also with several other algorithms.
 
----
+### 🔴 Low
 
-### 5. JWT Detection
+The string matches a broad characteristic shared by several algorithms.
 
-The program checks for strings beginning with:
+Example:
 
 ```text
-eyJ
+32 hexadecimal characters → NTLM
 ```
 
-These are commonly JWTs rather than hashes.
-
-The tool reports:
-
-```text
-JWT (not a hash)
-```
+The shape alone cannot reliably distinguish NTLM from MD5, MD4, or RIPEMD-128.
 
 ---
 
-### 6. Base64 Detection
+## ⚠️ Limitations
 
-The program also looks for characteristics of Base64-encoded data.
-
-Instead of incorrectly calling it a hash, it can report:
-
-```text
-Base64 blob (not a hash)
-```
-
----
-
-## Testing
-
-Run the test suite with:
-
-```bash
-just test
-```
-
-Or with pytest directly:
-
-```bash
-pytest
-```
-
-The tests verify things such as:
-
-* Prefix detection
-* Hexadecimal detection
-* Hash-length rules
-* MySQL5 detection
-* DES crypt detection
-* NetNTLM detection
-* PHC fallback
-* JWT detection
-* Base64 detection
-* Confidence levels
-* Immutable candidate objects
-
----
-
-## Example CLI Commands
-
-### Identify a hash
-
-```bash
-python hash_identifier.py 5f4dcc3b5aa765d61d8327deb882cf99
-```
-
-### Limit the number of results
-
-```bash
-python hash_identifier.py 5f4dcc3b5aa765d61d8327deb882cf99 --top 2
-```
-
-Short form:
-
-```bash
-python hash_identifier.py 5f4dcc3b5aa765d61d8327deb882cf99 -n 2
-```
-
----
-
-## Limitations
-
-This tool **cannot always determine the exact hashing algorithm**.
+Hash identification from a string's appearance is inherently limited.
 
 For example:
 
 ```text
-5f4dcc3b5aa765d61d8327deb882cf99
+5d41402abc4b2a76b9719d911017c592
 ```
 
-has 32 hexadecimal characters.
+is 32 hexadecimal characters.
 
-Multiple algorithms can produce a 32-character hexadecimal output.
+That alone does **not** prove that it is MD5.
 
-Therefore, the tool reports:
+It could potentially represent:
+
+* MD5
+* NTLM
+* MD4
+* RIPEMD-128
+
+Therefore, this project uses **candidate matching and confidence levels** instead of pretending that the algorithm can always be known with certainty.
+
+---
+
+## 📁 Project Structure
 
 ```text
-possible candidates
+Hash-Identifier/
+│
+├── hash_identifier.py
+└── README.md
 ```
 
-rather than pretending that the answer is always certain.
+---
 
-Other factors such as the application, database, salt format, protocol, or surrounding context may be required to determine the exact algorithm.
+
+## 🔐 Security Note
+
+This tool is intended for **educational, defensive, and cybersecurity research purposes**.
+
+It identifies possible formats based on observable characteristics. It does **not** crack passwords, recover plaintext, or guarantee the algorithm used to generate a hash.
 
 ---
 
-## Security Note
+## 👨‍💻 Author
 
-This project is intended for **educational and defensive cybersecurity purposes**.
+**Aditya Pandey**
 
-Hash identification is only one step in understanding a hash. The tool does not:
+Built as a hands-on Python cybersecurity project to learn:
 
-* Crack passwords
-* Perform brute-force attacks
-* Recover plaintext passwords
-* Exploit systems
-* Bypass authentication
-
-Only analyze hashes that you are authorized to examine.
-
----
-
-## Learning Goals
-
-This project is designed to practice Python fundamentals including:
-
-* Functions
-* Classes
-* Dataclasses
-* Type hints
-* Lists
-* Tuples
-* Dictionaries
-* Sets and `frozenset`
-* String operations
-* Slicing
-* `all()` and `any()`
-* `enumerate()`
-* Generator expressions
-* `argparse`
-* Exception-free result handling
-* Unit testing
-* CLI application structure
-
----
-
-Built as a cybersecurity/Python learning project.
+* Python
+* CLI development
+* Hash formats
+* Pattern matching
+* Input validation
+* Cybersecurity tooling
+* Rule-based detection
