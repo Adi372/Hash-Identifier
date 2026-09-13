@@ -306,9 +306,6 @@ It identifies possible formats based on observable characteristics. It does **no
 
 ---
 
-## 👨‍💻 Author
-
-**Aditya Pandey**
 
 Built as a hands-on Python cybersecurity project to learn:
 
